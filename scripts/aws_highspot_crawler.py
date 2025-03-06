@@ -142,35 +142,124 @@ class HighspotCrawler:
                     print(f"截图已保存至: {screenshot_path}")
                     result["files"]["screenshot"] = screenshot_path
                 
-                # 提取文本内容
+                # 提取内容并保存为Markdown
                 if extract_text:
                     # 获取页面内容
                     html_content = await page.content()
                     soup = BeautifulSoup(html_content, 'html.parser')
                     
-                    # 提取主要内容（根据实际页面结构调整选择器）
-                    main_content = soup.select("main article")
+                    # 获取页面标题
+                    title = soup.title.string if soup.title else "无标题页面"
                     
-                    # 提取文本
-                    extracted_text = ""
-                    if main_content:
-                        for element in main_content:
-                            extracted_text += element.get_text(separator="\n", strip=True) + "\n\n"
+                    # 提取所有内容（不仅限于main article）
+                    # 首先尝试获取主要内容区域
+                    content_selectors = ["main", "article", ".content", "#content", ".main-content", "body"]
+                    main_content = None
                     
-                    # 提取链接
+                    for selector in content_selectors:
+                        elements = soup.select(selector)
+                        if elements:
+                            main_content = elements
+                            break
+                    
+                    if not main_content:
+                        main_content = [soup.body] if soup.body else [soup]
+                    
+                    # 提取结构化内容
+                    markdown_content = f"# {title}\n\n"
+                    markdown_content += f"*爬取时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*\n\n"
+                    markdown_content += f"*来源URL: {url}*\n\n"
+                    markdown_content += "---\n\n"
+                    
+                    # 提取所有标题和段落
+                    headers_and_paragraphs = []
+                    for element in main_content:
+                        # 提取标题
+                        for i in range(1, 7):
+                            for header in element.find_all(f'h{i}'):
+                                header_text = header.get_text(strip=True)
+                                if header_text:
+                                    headers_and_paragraphs.append({
+                                        'type': f'h{i}',
+                                        'content': header_text
+                                    })
+                        
+                        # 提取段落
+                        for p in element.find_all('p'):
+                            p_text = p.get_text(strip=True)
+                            if p_text:
+                                headers_and_paragraphs.append({
+                                    'type': 'p',
+                                    'content': p_text
+                                })
+                    
+                    # 将标题和段落添加到Markdown
+                    for item in headers_and_paragraphs:
+                        if item['type'].startswith('h'):
+                            level = int(item['type'][1])
+                            markdown_content += f"{'#' * level} {item['content']}\n\n"
+                        else:
+                            markdown_content += f"{item['content']}\n\n"
+                    
+                    # 提取所有图片
+                    images = []
+                    for element in main_content:
+                        for img in element.find_all('img'):
+                            src = img.get('src')
+                            alt = img.get('alt', '图片')
+                            if src:
+                                # 处理相对URL
+                                if not src.startswith(('http://', 'https://', 'data:')):
+                                    src = self.base_url + src if src.startswith('/') else self.base_url + '/' + src
+                                
+                                # 过滤掉base64图片和小图标
+                                if not src.startswith('data:'):
+                                    images.append({
+                                        'src': src,
+                                        'alt': alt
+                                    })
+                    
+                    # 将图片添加到Markdown
+                    if images:
+                        markdown_content += "## 图片内容\n\n"
+                        for i, img in enumerate(images, 1):
+                            markdown_content += f"### 图片 {i}\n\n"
+                            markdown_content += f"![{img['alt']}]({img['src']})\n\n"
+                    
+                    # 提取所有链接
                     links = []
-                    for a in soup.select("main article a"):
-                        href = a.get("href")
-                        if href:
-                            if not href.startswith("http"):
-                                href = self.base_url + href if href.startswith("/") else self.base_url + "/" + href
-                            links.append({
-                                "text": a.get_text(strip=True),
-                                "href": href
-                            })
+                    for element in main_content:
+                        for a in element.find_all('a'):
+                            href = a.get('href')
+                            text = a.get_text(strip=True)
+                            if href and text:
+                                # 处理相对URL
+                                if not href.startswith(('http://', 'https://', 'javascript:', '#', 'mailto:')):
+                                    href = self.base_url + href if href.startswith('/') else self.base_url + '/' + href
+                                
+                                links.append({
+                                    'text': text,
+                                    'href': href
+                                })
                     
-                    # 保存提取的内容
+                    # 将链接添加到Markdown
+                    if links:
+                        markdown_content += "## 链接内容\n\n"
+                        for i, link in enumerate(links, 1):
+                            markdown_content += f"{i}. [{link['text']}]({link['href']})\n"
+                    
+                    # 保存Markdown文件
+                    markdown_path = f"{file_prefix}.md"
+                    with open(markdown_path, "w", encoding="utf-8") as f:
+                        f.write(markdown_content)
+                    
+                    print(f"Markdown内容已保存至: {markdown_path}")
+                    result["files"]["markdown"] = markdown_path
+                    
+                    # 同时保存原始文本文件（保持兼容性）
                     text_path = f"{file_prefix}_content.txt"
+                    extracted_text = "\n\n".join([item['content'] for item in headers_and_paragraphs])
+                    
                     with open(text_path, "w", encoding="utf-8") as f:
                         f.write("===== 提取的文本内容 =====\n\n")
                         f.write(extracted_text)
@@ -183,7 +272,9 @@ class HighspotCrawler:
                     
                     # 将提取的内容也添加到结果中
                     result["extracted_content"] = {
+                        "title": title,
                         "text": extracted_text,
+                        "images": images,
                         "links": links
                     }
                 
@@ -342,6 +433,191 @@ class HighspotCrawler:
                 print(f"交互后截图已保存至: {screenshot_path}")
                 result["files"]["screenshot"] = screenshot_path
                 
+                # 提取内容并保存为Markdown
+                # 获取页面内容
+                html_content = await page.content()
+                soup = BeautifulSoup(html_content, 'html.parser')
+                
+                # 获取页面标题
+                title = soup.title.string if soup.title else "无标题页面"
+                
+                # 提取所有内容（不仅限于main article）
+                # 首先尝试获取主要内容区域
+                content_selectors = ["main", "article", ".content", "#content", ".main-content", "body"]
+                main_content = None
+                
+                for selector in content_selectors:
+                    elements = soup.select(selector)
+                    if elements:
+                        main_content = elements
+                        break
+                
+                if not main_content:
+                    main_content = [soup.body] if soup.body else [soup]
+                
+                # 提取结构化内容
+                markdown_content = f"# {title}\n\n"
+                markdown_content += f"*交互式爬取时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*\n\n"
+                markdown_content += f"*来源URL: {url}*\n\n"
+                markdown_content += "---\n\n"
+                markdown_content += "## 交互操作\n\n"
+                
+                # 记录执行的交互操作
+                if interactions:
+                    for i, interaction in enumerate(interactions, 1):
+                        action = interaction.get("action")
+                        if action == "click":
+                            markdown_content += f"{i}. 点击元素: `{interaction.get('selector')}`\n"
+                        elif action == "wait":
+                            markdown_content += f"{i}. 等待: {interaction.get('time', 1)} 秒\n"
+                        elif action == "scroll":
+                            markdown_content += f"{i}. 滚动到: {interaction.get('position', 'bottom')}\n"
+                    markdown_content += "\n---\n\n"
+                
+                # 提取所有标题和段落
+                headers_and_paragraphs = []
+                for element in main_content:
+                    # 提取标题
+                    for i in range(1, 7):
+                        for header in element.find_all(f'h{i}'):
+                            header_text = header.get_text(strip=True)
+                            if header_text:
+                                headers_and_paragraphs.append({
+                                    'type': f'h{i}',
+                                    'content': header_text
+                                })
+                    
+                    # 提取段落
+                    for p in element.find_all('p'):
+                        p_text = p.get_text(strip=True)
+                        if p_text:
+                            headers_and_paragraphs.append({
+                                'type': 'p',
+                                'content': p_text
+                            })
+                
+                # 将标题和段落添加到Markdown
+                for item in headers_and_paragraphs:
+                    if item['type'].startswith('h'):
+                        level = int(item['type'][1])
+                        markdown_content += f"{'#' * level} {item['content']}\n\n"
+                    else:
+                        markdown_content += f"{item['content']}\n\n"
+                
+                # 提取所有图片
+                # images = []
+                # for element in main_content:
+                #     for img in element.find_all('img'):
+                #         src = img.get('src')
+                #         alt = img.get('alt', '图片')
+                #         if src:
+                #             # 处理相对URL
+                #             if not src.startswith(('http://', 'https://', 'data:')):
+                #                 src = self.base_url + src if src.startswith('/') else self.base_url + '/' + src
+                            
+                #             # 过滤掉base64图片和小图标
+                #             if not src.startswith('data:'):
+                #                 images.append({
+                #                     'src': src,
+                #                     'alt': alt
+                #                 })
+                
+                # # 将图片添加到Markdown
+                # if images:
+                #     markdown_content += "## 图片内容\n\n"
+                #     for i, img in enumerate(images, 1):
+                #         markdown_content += f"### 图片 {i}\n\n"
+                #         markdown_content += f"![{img['alt']}]({img['src']})\n\n"
+                
+                # 提取所有链接
+                links = []
+                for element in main_content:
+                    for a in element.find_all('a'):
+                        href = a.get('href')
+                        text = a.get_text(strip=True)
+                        if href and text:
+                            # 处理相对URL
+                            if not href.startswith(('http://', 'https://', 'javascript:', '#', 'mailto:')):
+                                href = self.base_url + href if href.startswith('/') else self.base_url + '/' + href
+                            
+                            links.append({
+                                'text': text,
+                                'href': href
+                            })
+                
+                # 将链接添加到Markdown
+                if links:
+                    markdown_content += "## 链接内容\n\n"
+                    for i, link in enumerate(links, 1):
+                        markdown_content += f"{i}. [{link['text']}]({link['href']})\n"
+                
+                # 保存Markdown文件
+                markdown_path = f"{file_prefix}.md"
+                with open(markdown_path, "w", encoding="utf-8") as f:
+                    f.write(markdown_content)
+                
+                print(f"Markdown内容已保存至: {markdown_path}")
+                result["files"]["markdown"] = markdown_path
+                
+                # 同时保存原始文本文件（保持兼容性）
+                text_path = f"{file_prefix}_content.txt"
+                extracted_text = "\n\n".join([item['content'] for item in headers_and_paragraphs])
+                
+                with open(text_path, "w", encoding="utf-8") as f:
+                    f.write("===== 提取的文本内容 =====\n\n")
+                    f.write(extracted_text)
+                    f.write("\n\n===== 提取的链接 =====\n\n")
+                    for i, link in enumerate(links, 1):
+                        f.write(f"{i}. {link['text']} - {link['href']}\n")
+                
+                print(f"提取的内容已保存至: {text_path}")
+                result["files"]["text"] = text_path
+                
+                # 将提取的内容也添加到结果中
+                result["extracted_content"] = {
+                    "title": title,
+                    "text": extracted_text,
+                    "images": images,
+                    "links": links
+                }
+                
+                # 执行JavaScript获取动态内容
+                js_data = await page.evaluate("""() => {
+                    // 尝试获取可能存在的全局数据
+                    const data = {
+                        title: document.title,
+                        metaData: {}
+                    };
+                    
+                    // 提取meta标签信息
+                    document.querySelectorAll('meta').forEach(meta => {
+                        if (meta.name && meta.content) {
+                            data.metaData[meta.name] = meta.content;
+                        }
+                    });
+                    
+                    // 尝试获取可能存在的JSON数据
+                    const scriptTags = Array.from(document.querySelectorAll('script[type="application/json"], script[type="application/ld+json"]'));
+                    data.jsonData = scriptTags.map(script => {
+                        try {
+                            return JSON.parse(script.textContent);
+                        } catch (e) {
+                            return null;
+                        }
+                    }).filter(Boolean);
+                    
+                    return data;
+                }""")
+                
+                # 保存JavaScript提取的数据
+                if js_data:
+                    js_data_path = f"{file_prefix}_js_data.json"
+                    with open(js_data_path, "w", encoding="utf-8") as f:
+                        json.dump(js_data, f, ensure_ascii=False, indent=2)
+                    print(f"JavaScript数据已保存至: {js_data_path}")
+                    result["files"]["js_data"] = js_data_path
+                    result["js_data"] = js_data
+                
                 print("交互式爬取完成!")
                 return result
                 
@@ -354,7 +630,7 @@ class HighspotCrawler:
 
 async def main():
     # 目标URL
-    target_url = "https://aws.highspot.com/spots/60bdbd9634d6be4dbd9ce328?list=all&overview=true"
+    target_url = "https://aws.highspot.com/spots/60bdbd9634d6be4dbd9ce328?list=all&overview=false"
     
     # 创建爬虫实例
     crawler = HighspotCrawler()
@@ -364,18 +640,203 @@ async def main():
         print("Cookie文件不存在，开始获取...")
         await crawler.save_cookies(headless=False)  # 显示浏览器进行登录
     
-    # 基本爬取
-    print("\n===== 开始基本爬取 =====")
-    result = await crawler.crawl_content(target_url, output_dir="output")
-    
     # 交互式爬取（如果需要）
     print("\n===== 开始交互式爬取 =====")
     interactions = [
-        {"action": "wait", "time": 2},  # 等待2秒
+        {"action": "wait", "time": 10},  # 等待2秒
         {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 2},  # 等待2秒
-        # 可以添加更多交互，如点击"加载更多"按钮等
-        # {"action": "click", "selector": "button.load-more"},
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "scroll", "position": "bottom"},  # 滚动到底部
+          # 等待2秒
     ]
     interactive_result = await crawler.crawl_with_interaction(target_url, interactions, output_dir="output")
     
