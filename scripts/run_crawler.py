@@ -45,11 +45,11 @@ async def run_example():
     if choice == "2" or choice == "3":
         print("\n===== 开始交互式爬取 =====")
         
-        # 默认交互操作
+        # 修改默认交互操作
         default_interactions = [
-            {"action": "wait", "time": 2},  # 等待2秒
-            {"action": "scroll", "position": "bottom"},  # 滚动到底部
-            {"action": "wait", "time": 2},  # 等待2秒
+            {"action": "wait", "time": 5},  # 等待5秒确保页面初始加载
+            {"action": "scroll", "position": "bottom"},  # 渐进式滚动到底部
+            {"action": "wait", "time": 5},  # 等待最终内容加载完成
         ]
         
         # 询问是否需要自定义交互

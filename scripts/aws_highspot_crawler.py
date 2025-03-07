@@ -406,19 +406,49 @@ class HighspotCrawler:
                         elif action == "scroll":
                             position = interaction.get("position", "bottom")
                             if position == "bottom":
-                                await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                                # 使用渐进式滚动来确保所有内容加载
+                                prev_height = 0
+                                while True:
+                                    # 获取当前页面高度
+                                    curr_height = await page.evaluate("""() => {
+                                        return document.documentElement.scrollHeight;
+                                    }""")
+                                    
+                                    # 如果高度没有变化，说明已经到达真正的底部
+                                    if curr_height == prev_height:
+                                        break
+                                    
+                                    # 渐进式滚动
+                                    for scroll_pos in range(prev_height, curr_height, 300):  # 每次滚动300像素
+                                        await page.evaluate(f"window.scrollTo(0, {scroll_pos})")
+                                        await asyncio.sleep(0.5)  # 短暂等待让内容加载
+                                    
+                                    # 滚动到当前检测到的底部
+                                    await page.evaluate(f"window.scrollTo(0, {curr_height})")
+                                    await asyncio.sleep(2)  # 等待新内容加载
+                                    
+                                    prev_height = curr_height
+                                    
+                                # 最后再滚动到顶部，然后慢慢滚动到底部一次，以确保所有内容都被正确加载
+                                await page.evaluate("window.scrollTo(0, 0)")
+                                await asyncio.sleep(1)
+                                
+                                final_height = await page.evaluate("document.documentElement.scrollHeight")
+                                for scroll_pos in range(0, final_height, 300):
+                                    await page.evaluate(f"window.scrollTo(0, {scroll_pos})")
+                                    await asyncio.sleep(0.5)
+                                    
                             elif position == "top":
                                 await page.evaluate("window.scrollTo(0, 0)")
                             else:
-                                # 滚动到指定位置
                                 try:
                                     position = int(position)
                                     await page.evaluate(f"window.scrollTo(0, {position})")
                                 except:
                                     pass
                             print(f"滚动到: {position}")
-                            await asyncio.sleep(1)  # 等待滚动完成和可能的内容加载
-                
+                            await asyncio.sleep(1)
+        
                 # 保存交互后的HTML
                 html_path = f"{file_prefix}.html"
                 html_content = await page.content()
@@ -577,7 +607,6 @@ class HighspotCrawler:
                 result["extracted_content"] = {
                     "title": title,
                     "text": extracted_text,
-                    "images": images,
                     "links": links
                 }
                 
@@ -630,7 +659,7 @@ class HighspotCrawler:
 
 async def main():
     # 目标URL
-    target_url = "https://aws.highspot.com/spots/60bdbd9634d6be4dbd9ce328?list=all&overview=false"
+    target_url = "https://aws.highspot.com/items/64cc7372c6f98784322eff65"
     
     # 创建爬虫实例
     crawler = HighspotCrawler()
@@ -643,200 +672,9 @@ async def main():
     # 交互式爬取（如果需要）
     print("\n===== 开始交互式爬取 =====")
     interactions = [
-        {"action": "wait", "time": 10},  # 等待2秒
+        {"action": "wait", "time": 5},  # 等待2秒
         {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-        {"action": "wait", "time": 10},  # 等待2秒
-        {"action": "scroll", "position": "bottom"},  # 滚动到底部
-          # 等待2秒
+        {"action": "wait", "time": 5},  # 等待2秒  # 等待2秒
     ]
     interactive_result = await crawler.crawl_with_interaction(target_url, interactions, output_dir="output")
     
