@@ -1,0 +1,57 @@
+2025-03-10 13:58:57,764 - INFO - 找到 825 个URL需要处理
+2025-03-10 13:59:44,415 - ERROR - 提取过程中出错 (https://aws.highspot.com/items/66223793d1df39b53561a65d): Timeout 30000ms exceeded.
+2025-03-10 13:59:44,416 - INFO - 重试 (1/2): https://aws.highspot.com/items/66223793d1df39b53561a65d
+2025-03-10 13:59:44,838 - ERROR - 提取过程中出错 (https://aws.highspot.com/items/64b0f05996f11ffee024723b): Timeout 30000ms exceeded.
+2025-03-10 13:59:44,839 - INFO - 重试 (1/2): https://aws.highspot.com/items/64b0f05996f11ffee024723b
+2025-03-10 13:59:44,974 - ERROR - 提取过程中出错 (https://aws.highspot.com/items/6639bcfdcd9045dfcda52c60): Timeout 30000ms exceeded.
+2025-03-10 13:59:44,975 - INFO - 重试 (1/2): https://aws.highspot.com/items/6639bcfdcd9045dfcda52c60
+2025-03-10 14:00:18,999 - ERROR - 提取过程中出错 (https://aws.highspot.com/items/66223793d1df39b53561a65d): Timeout 30000ms exceeded.
+2025-03-10 14:00:19,000 - INFO - 重试 (2/2): https://aws.highspot.com/items/66223793d1df39b53561a65d
+2025-03-10 14:00:24,960 - ERROR - 提取过程中出错 (https://aws.highspot.com/items/667d15effd1636565e595595): Timeout 30000ms exceeded.
+2025-03-10 14:00:24,960 - INFO - 重试 (1/2): https://aws.highspot.com/items/667d15effd1636565e595595
+2025-03-10 14:00:38,932 - ERROR - 提取过程中出错 (https://aws.highspot.com/items/654c9c85b5b76ab9a23bb719): Timeout 30000ms exceeded.
+2025-03-10 14:00:38,932 - INFO - 重试 (1/2): https://aws.highspot.com/items/654c9c85b5b76ab9a23bb719
+2025-03-10 14:00:40,817 - ERROR - 提取过程中出错 (https://aws.highspot.com/items/672191c64c6aea6343469c01): Timeout 30000ms exceeded.
+2025-03-10 14:00:40,818 - INFO - 重试 (1/2): https://aws.highspot.com/items/672191c64c6aea6343469c01
+2025-03-10 14:00:53,227 - ERROR - 提取过程中出错 (https://aws.highspot.com/items/66223793d1df39b53561a65d): Timeout 30000ms exceeded.
+2025-03-10 14:01:01,651 - ERROR - 提取过程中出错 (https://aws.highspot.com/items/64f1b4e738c31639aefa7347): Page.goto: Timeout 30000ms exceeded.
+Call log:
+  - navigating to "https://aws.highspot.com/items/64f1b4e738c31639aefa7347", waiting until "load"
+
+2025-03-10 14:01:01,652 - INFO - 重试 (1/2): https://aws.highspot.com/items/64f1b4e738c31639aefa7347
+2025-03-10 14:01:17,127 - ERROR - 提取过程中出错 (https://aws.highspot.com/items/664d8943ebdad2bca09f1a75): Page.goto: Timeout 30000ms exceeded.
+Call log:
+  - navigating to "https://aws.highspot.com/items/664d8943ebdad2bca09f1a75", waiting until "load"
+
+2025-03-10 14:01:17,128 - INFO - 重试 (1/2): https://aws.highspot.com/items/664d8943ebdad2bca09f1a75
+2025-03-10 14:01:23,607 - ERROR - 提取过程中出错 (https://aws.highspot.com/items/6551d0dc790a590c761906bd): Page.goto: Timeout 30000ms exceeded.
+Call log:
+  - navigating to "https://aws.highspot.com/items/6551d0dc790a590c761906bd", waiting until "load"
+
+2025-03-10 14:01:23,607 - INFO - 重试 (1/2): https://aws.highspot.com/items/6551d0dc790a590c761906bd
+2025-03-10 14:01:37,835 - ERROR - 提取过程中出错 (https://aws.highspot.com/items/64f1b4e738c31639aefa7347): Timeout 30000ms exceeded.
+2025-03-10 14:01:37,836 - INFO - 重试 (2/2): https://aws.highspot.com/items/64f1b4e738c31639aefa7347
+2025-03-10 14:01:46,080 - ERROR - 提取过程中出错 (https://aws.highspot.com/items/667a32f5e3c0f652a25b6beb): Timeout 30000ms exceeded.
+2025-03-10 14:01:46,081 - INFO - 重试 (1/2): https://aws.highspot.com/items/667a32f5e3c0f652a25b6beb
+2025-03-10 14:01:48,360 - ERROR - 提取过程中出错 (https://aws.highspot.com/items/667a32f5e3c0f652a25b6beb): Page.goto: net::ERR_NETWORK_CHANGED at https://aws.highspot.com/items/667a32f5e3c0f652a25b6beb
+Call log:
+  - navigating to "https://aws.highspot.com/items/667a32f5e3c0f652a25b6beb", waiting until "load"
+
+2025-03-10 14:01:48,360 - INFO - 重试 (2/2): https://aws.highspot.com/items/667a32f5e3c0f652a25b6beb
+2025-03-10 14:01:51,965 - ERROR - 提取过程中出错 (https://aws.highspot.com/items/667a32f5e3c0f652a25b6beb): Page.goto: net::ERR_NETWORK_CHANGED at https://aws.highspot.com/items/667a32f5e3c0f652a25b6beb
+Call log:
+  - navigating to "https://aws.highspot.com/items/667a32f5e3c0f652a25b6beb", waiting until "load"
+
+2025-03-10 14:01:51,973 - ERROR - 提取过程中出错 (https://aws.highspot.com/items/66208ca5d1df392edcd18b12): Page.goto: net::ERR_NETWORK_CHANGED at https://aws.highspot.com/items/66208ca5d1df392edcd18b12
+Call log:
+  - navigating to "https://aws.highspot.com/items/66208ca5d1df392edcd18b12", waiting until "load"
+
+2025-03-10 14:01:51,973 - INFO - 重试 (1/2): https://aws.highspot.com/items/66208ca5d1df392edcd18b12
+2025-03-10 14:02:28,940 - ERROR - 提取过程中出错 (https://aws.highspot.com/items/64f1b4e738c31639aefa7347): Timeout 30000ms exceeded.
+2025-03-10 14:02:29,082 - ERROR - 提取过程中出错 (https://aws.highspot.com/items/672192278a73544fbec42f08): Page.goto: Timeout 30000ms exceeded.
+Call log:
+  - navigating to "https://aws.highspot.com/items/672192278a73544fbec42f08", waiting until "load"
+
+2025-03-10 14:02:29,083 - INFO - 重试 (1/2): https://aws.highspot.com/items/672192278a73544fbec42f08
+2025-03-10 14:02:36,456 - ERROR - 提取过程中出错 (https://aws.highspot.com/items/66208ca5d1df392edcd18b12): Timeout 30000ms exceeded.
+2025-03-10 14:02:36,457 - INFO - 重试 (2/2): https://aws.highspot.com/items/66208ca5d1df392edcd18b12
