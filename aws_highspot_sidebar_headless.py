@@ -88,7 +88,7 @@ async def extract_sidebar_details(url: str, cookies_path: str = "cookies_playwri
             
             # 额外等待时间，确保动态内容完全加载
             # 在无头模式下可能需要更长的等待时间
-            await asyncio.sleep(3)
+            await asyncio.sleep(10)
             
             # 检查页面是否已加载关键元素
             try:

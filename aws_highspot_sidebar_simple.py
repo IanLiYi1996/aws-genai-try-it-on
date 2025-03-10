@@ -15,10 +15,15 @@ AWS Highspot Sidebar 简易提取器
 import asyncio
 import json
 import os
+from tqdm import tqdm
 from datetime import datetime
 from typing import List, Dict, Any
 
 from playwright.async_api import async_playwright
+
+
+def list_files_in_directory(directory_path):
+    return os.listdir(directory_path)
 
 async def save_cookies(url: str, cookies_path: str = "cookies_playwright.json", headless: bool = False) -> None:
     """交互式登录并保存cookies"""
@@ -171,7 +176,21 @@ async def main(target_url, output_dir,file_name):
         print("提取失败或未找到内容!")
 
 if __name__ == "__main__":
-    output_dir = "output"
-    target_url = "https://aws.highspot.com/items/668747afb742e193718ee837"
-    file_name = f"{output_dir}/{target_url.split('/')[-1]}.json"
-    asyncio.run(main(target_url, output_dir, file_name))
+    directory_path = '/Users/ianleely/Documents/Codes/aws-genai-try-it-on/files/metadata-files/metadata-chage-pdf-to-txt'
+    output_dir = '/Users/ianleely/Documents/Codes/aws-genai-try-it-on/output'
+    file_names = list_files_in_directory(directory_path)
+
+    for file_name in tqdm(file_names):
+        input_file_path = f"{directory_path}/{file_name}"
+        with open(input_file_path, 'r') as file:
+            data = json.load(file)
+        target_url = data['metadataAttributes']['x-amz-bedrock-kb-source-uri']['value']['stringValue']
+        file_name = f"{output_dir}/{file_name}.json"
+        if os.path.exists(file_name):
+            print(f"文件已存在，跳过: {file_name}")
+            continue
+        asyncio.run(main(target_url, output_dir, file_name))
+    # output_dir = "output"
+    # target_url = "https://aws.highspot.com/items/668747afb742e193718ee837"
+    # file_name = f"{output_dir}/{target_url.split('/')[-1]}.json"
+    # asyncio.run(main(target_url, output_dir, file_name))
